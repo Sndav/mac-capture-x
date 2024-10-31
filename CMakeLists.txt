@@ -19,15 +19,9 @@ target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE OBS::libobs)
 target_sources(
         ${CMAKE_PROJECT_NAME} PRIVATE
         src/plugin-main.c
-        src/audio-device-enum.c
-        src/audio-device-enum.h
-        src/mac-audio.c
-        src/mac-display-capture.m
-        src/mac-sck-audio-capture.m
         src/mac-sck-common.h
         src/mac-sck-common.m
         src/mac-sck-video-capture.m
-        src/mac-window-capture.m
         src/plugin-main.c
         src/window-utils.m
         src/window-utils.h

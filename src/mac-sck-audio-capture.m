@@ -301,7 +301,7 @@ static void sck_audio_capture_update(void *data, obs_data_t *settings)
 #pragma mark - obs_source_info
 
 struct obs_source_info sck_audio_capture_info = {
-    .id = "sck_audio_capture",
+    .id = "sck_audio_capture_x",
     .type = OBS_SOURCE_TYPE_INPUT,
     .get_name = sck_audio_capture_getname,
 

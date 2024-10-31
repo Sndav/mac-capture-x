@@ -1,6 +1,6 @@
 #include "mac-sck-common.h"
 
-bool is_screen_capture_available(void)
+bool is_screen_capture_available_x(void)
 {
     if (@available(macOS 12.5, *)) {
         return true;

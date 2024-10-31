@@ -5,7 +5,7 @@ include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/common/bootstrap.cmake" NO_POLICY_SCO
 project(${_name} VERSION ${_version})
 
 option(ENABLE_FRONTEND_API "Use obs-frontend-api for UI functionality" OFF)
-option(ENABLE_QT "Use Qt functionality" OFF)
+option(ENABLE_QT "Use Qt functionality" TRUE)
 
 include(compilerconfig)
 include(defaults)
@@ -15,6 +15,23 @@ add_library(${CMAKE_PROJECT_NAME} MODULE)
 
 find_package(libobs REQUIRED)
 target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE OBS::libobs)
+
+target_sources(
+        ${CMAKE_PROJECT_NAME} PRIVATE
+        src/plugin-main.c
+        src/audio-device-enum.c
+        src/audio-device-enum.h
+        src/mac-audio.c
+        src/mac-display-capture.m
+        src/mac-sck-audio-capture.m
+        src/mac-sck-common.h
+        src/mac-sck-common.m
+        src/mac-sck-video-capture.m
+        src/mac-window-capture.m
+        src/plugin-main.c
+        src/window-utils.m
+        src/window-utils.h
+)
 
 if(ENABLE_FRONTEND_API)
   find_package(obs-frontend-api REQUIRED)
@@ -34,22 +51,7 @@ if(ENABLE_QT)
                AUTORCC ON)
 endif()
 
-target_sources(
-        ${CMAKE_PROJECT_NAME} PRIVATE
-        src/plugin-main.c
-        src/audio-device-enum.c
-        src/audio-device-enum.h
-        src/mac-audio.c
-        src/mac-display-capture.m
-        src/mac-sck-audio-capture.m
-        src/mac-sck-common.h
-        src/mac-sck-common.m
-        src/mac-sck-video-capture.m
-        src/mac-window-capture.m
-        src/plugin-main.c
-        src/window-utils.h
-        src/window-utils.m
-)
+
 
 target_link_libraries(
         ${CMAKE_PROJECT_NAME}

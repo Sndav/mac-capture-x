@@ -657,8 +657,8 @@ static obs_properties_t *display_capture_properties(void *unused)
     return props;
 }
 
-struct obs_source_info display_capture_info = {
-    .id = "display_capture",
+struct obs_source_info display_capture_x_info = {
+    .id = "display_capture_x",
     .type = OBS_SOURCE_TYPE_INPUT,
     .get_name = display_capture_getname,
 

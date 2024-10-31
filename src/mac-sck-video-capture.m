@@ -103,6 +103,8 @@ static bool init_screen_stream(struct screen_capture *sc)
             CGDisplayModeRelease(display_mode);
         };
 
+    // print_hidden_applications(sc->shareable_content.applications);
+    // blog(LOG_INFO, "hidden_applications: %s", [sc->hidden_applications cStringUsingEncoding:NSUTF8StringEncoding]);
     switch (sc->capture_type) {
         case ScreenCaptureDisplayStream: {
             SCDisplay *target_display = get_target_display();
@@ -114,27 +116,38 @@ static bool init_screen_stream(struct screen_capture *sc)
                 os_event_init(&sc->stream_start_completed, OS_EVENT_TYPE_MANUAL);
                 return true;
             }
+
+            NSArray *empty = [[NSArray alloc] init];
+            NSMutableArray *exclusions = [[NSMutableArray alloc] init];
+
+
             if (sc->hide_obs) {
-                SCRunningApplication *obsApp = nil;
                 NSString *mainBundleIdentifier = [[NSBundle mainBundle] bundleIdentifier];
                 for (SCRunningApplication *app in sc->shareable_content.applications) {
                     if ([app.bundleIdentifier isEqualToString:mainBundleIdentifier]) {
-                        obsApp = app;
+                        [exclusions addObject:app];
                         break;
                     }
                 }
-                NSArray *exclusions = [[NSArray alloc] initWithObjects:obsApp, nil];
-                NSArray *empty = [[NSArray alloc] init];
-                content_filter = [[SCContentFilter alloc] initWithDisplay:target_display
+            } else {
+                content_filter = [[SCContentFilter alloc] initWithDisplay:target_display excludingWindows:empty];
+            }
+
+            // match hidden application
+
+            for (SCRunningApplication *app in sc->shareable_content.applications) {
+                NSString* bundleIdentifier = app.bundleIdentifier;
+                if([sc->hidden_applications containsString:bundleIdentifier]) {
+                    [exclusions addObject:app];
+                }
+            }
+
+            content_filter = [[SCContentFilter alloc] initWithDisplay:target_display
                                                     excludingApplications:exclusions
                                                          exceptingWindows:empty];
-                [empty release];
-                [exclusions release];
-            } else {
-                NSArray *empty = [[NSArray alloc] init];
-                content_filter = [[SCContentFilter alloc] initWithDisplay:target_display excludingWindows:empty];
-                [empty release];
-            }
+
+            [empty release];
+            [exclusions release];                                             
 
             set_display_mode(sc, target_display);
         } break;
@@ -277,6 +290,9 @@ static void *sck_video_capture_create(obs_data_t *settings, obs_source_t *source
     sc->source = source;
     sc->hide_cursor = !obs_data_get_bool(settings, "show_cursor");
     sc->hide_obs = obs_data_get_bool(settings, "hide_obs");
+
+    sc->hidden_applications = [[NSString alloc] initWithUTF8String:obs_data_get_string(settings, "hidden_application")];
+
     sc->show_empty_names = obs_data_get_bool(settings, "show_empty_names");
     sc->show_hidden_windows = obs_data_get_bool(settings, "show_hidden_windows");
     sc->window = (CGWindowID) obs_data_get_int(settings, "window");
@@ -406,6 +422,7 @@ static void sck_video_capture_defaults(obs_data_t *settings)
     obs_data_set_default_int(settings, "window", kCGNullWindowID);
     obs_data_set_default_bool(settings, "show_cursor", true);
     obs_data_set_default_bool(settings, "hide_obs", false);
+    obs_data_set_default_string(settings, "hidden_application", "");
     obs_data_set_default_bool(settings, "show_empty_names", false);
     obs_data_set_default_bool(settings, "show_hidden_windows", false);
 }
@@ -429,13 +446,18 @@ static void sck_video_capture_update(void *data, obs_data_t *settings)
     bool hide_obs = obs_data_get_bool(settings, "hide_obs");
     bool show_empty_names = obs_data_get_bool(settings, "show_empty_names");
     bool show_hidden_windows = obs_data_get_bool(settings, "show_hidden_windows");
+    NSString *hidden_application = [[NSString alloc] initWithUTF8String:obs_data_get_string(settings, "hidden_application")];
 
     if (capture_type == sc->capture_type) {
         switch (sc->capture_type) {
             case ScreenCaptureDisplayStream: {
+
                 if (sc->display == display && sc->hide_cursor != show_cursor && sc->hide_obs == hide_obs) {
-                    [application_id release];
-                    return;
+
+                    if ([hidden_application isEqualToString:sc->hidden_applications]) {
+                        [application_id release];
+                        return;
+                    }
                 }
             } break;
             case ScreenCaptureWindowStream: {
@@ -463,10 +485,10 @@ static void sck_video_capture_update(void *data, obs_data_t *settings)
     sc->application_id = application_id;
     sc->hide_cursor = !show_cursor;
     sc->hide_obs = hide_obs;
+    sc->hidden_applications = hidden_application;
     sc->show_empty_names = show_empty_names;
     sc->show_hidden_windows = show_hidden_windows;
     init_screen_stream(sc);
-
     obs_leave_graphics();
 }
 
@@ -484,6 +506,7 @@ static bool content_settings_changed(void *data, obs_properties_t *props, obs_pr
     obs_property_t *empty = obs_properties_get(props, "show_empty_names");
     obs_property_t *hidden = obs_properties_get(props, "show_hidden_windows");
     obs_property_t *hide_obs = obs_properties_get(props, "hide_obs");
+    obs_property_t *hidden_application = obs_properties_get(props, "hidden_application");
 
     obs_property_t *capture_type_error = obs_properties_get(props, "capture_type_info");
 
@@ -496,6 +519,7 @@ static bool content_settings_changed(void *data, obs_properties_t *props, obs_pr
                 obs_property_set_visible(empty, false);
                 obs_property_set_visible(hidden, false);
                 obs_property_set_visible(hide_obs, true);
+                obs_property_set_visible(hidden_application, true);
 
                 if (capture_type_error) {
                     obs_property_set_visible(capture_type_error, true);
@@ -509,6 +533,7 @@ static bool content_settings_changed(void *data, obs_properties_t *props, obs_pr
                 obs_property_set_visible(empty, true);
                 obs_property_set_visible(hidden, true);
                 obs_property_set_visible(hide_obs, false);
+                obs_property_set_visible(hidden_application, false);
 
                 if (capture_type_error) {
                     obs_property_set_visible(capture_type_error, false);
@@ -522,6 +547,7 @@ static bool content_settings_changed(void *data, obs_properties_t *props, obs_pr
                 obs_property_set_visible(empty, false);
                 obs_property_set_visible(hidden, true);
                 obs_property_set_visible(hide_obs, false);
+                obs_property_set_visible(hidden_application, false);
 
                 if (capture_type_error) {
                     obs_property_set_visible(capture_type_error, true);
@@ -534,6 +560,7 @@ static bool content_settings_changed(void *data, obs_properties_t *props, obs_pr
     sc->show_empty_names = obs_data_get_bool(settings, "show_empty_names");
     sc->show_hidden_windows = obs_data_get_bool(settings, "show_hidden_windows");
     sc->hide_obs = obs_data_get_bool(settings, "hide_obs");
+    
 
     screen_capture_build_content_list(sc, capture_type_id == ScreenCaptureDisplayStream);
     build_display_list(sc, props);
@@ -591,6 +618,8 @@ static obs_properties_t *sck_video_capture_properties(void *data)
     obs_properties_add_bool(props, "show_cursor", obs_module_text("DisplayCapture.ShowCursor"));
 
     obs_property_t *hide_obs = obs_properties_add_bool(props, "hide_obs", obs_module_text("DisplayCapture.HideOBS"));
+    obs_property_t *hidden_application = obs_properties_add_text(props, 
+        "hidden_application", obs_module_text("DisplayCapture.HideApplication"), OBS_TEXT_MULTILINE);
     obs_property_t *reactivate =
         obs_properties_add_button2(props, "reactivate_capture", obs_module_text("SCK.Restart"), reactivate_capture, sc);
     obs_property_set_enabled(reactivate, sc->capture_failed);
@@ -608,6 +637,7 @@ static obs_properties_t *sck_video_capture_properties(void *data)
                 obs_property_set_visible(empty, false);
                 obs_property_set_visible(hidden, false);
                 obs_property_set_visible(hide_obs, true);
+                obs_property_set_visible(hidden_application, true);
                 break;
             }
             case 1: {
@@ -617,6 +647,7 @@ static obs_properties_t *sck_video_capture_properties(void *data)
                 obs_property_set_visible(empty, true);
                 obs_property_set_visible(hidden, true);
                 obs_property_set_visible(hide_obs, false);
+                obs_property_set_visible(hidden_application, false);
                 break;
             }
             case 2: {
@@ -626,6 +657,7 @@ static obs_properties_t *sck_video_capture_properties(void *data)
                 obs_property_set_visible(empty, false);
                 obs_property_set_visible(hidden, true);
                 obs_property_set_visible(hide_obs, false);
+                obs_property_set_visible(hidden_application, false);
                 break;
             }
         }
@@ -694,7 +726,7 @@ enum gs_color_space sck_video_capture_get_color_space(void *data, size_t count,
 #pragma mark - obs_source_info
 
 struct obs_source_info sck_video_capture_info = {
-    .id = "screen_capture",
+    .id = "screen_capture_x",
     .type = OBS_SOURCE_TYPE_INPUT,
     .get_name = sck_video_capture_getname,
 

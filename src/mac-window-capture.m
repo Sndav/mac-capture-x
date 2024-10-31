@@ -205,8 +205,8 @@ static void window_capture_tick(void *data, float seconds)
     }
 }
 
-struct obs_source_info window_capture_info = {
-    .id = "window_capture",
+struct obs_source_info window_capture_x_info = {
+    .id = "window_capture_x",
     .type = OBS_SOURCE_TYPE_INPUT,
     .get_name = window_capture_getname,
 

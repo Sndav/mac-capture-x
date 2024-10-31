@@ -1129,8 +1129,8 @@ static obs_properties_t *coreaudio_output_properties(void *data)
 	return coreaudio_properties(false, data);
 }
 
-struct obs_source_info coreaudio_input_capture_info = {
-	.id = "coreaudio_input_capture",
+struct obs_source_info coreaudio_input_capture_x_info = {
+	.id = "coreaudio_input_capture_x",
 	.type = OBS_SOURCE_TYPE_INPUT,
 	.output_flags = OBS_SOURCE_AUDIO | OBS_SOURCE_DO_NOT_DUPLICATE,
 	.get_name = coreaudio_input_getname,
@@ -1142,7 +1142,7 @@ struct obs_source_info coreaudio_input_capture_info = {
 	.icon_type = OBS_ICON_TYPE_AUDIO_INPUT,
 };
 
-struct obs_source_info coreaudio_output_capture_info = {
+struct obs_source_info coreaudio_output_capture_x_info = {
 	.id = "coreaudio_output_capture",
 	.type = OBS_SOURCE_TYPE_INPUT,
 	.output_flags = OBS_SOURCE_AUDIO | OBS_SOURCE_DO_NOT_DUPLICATE |

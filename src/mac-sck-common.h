@@ -49,6 +49,9 @@ struct screen_capture {
     bool show_empty_names;
     bool audio_only;
 
+    // hide application list
+    NSString* hidden_applications;
+
     SCStream *disp;
     SCStreamConfiguration *stream_properties;
     SCShareableContent *shareable_content;
@@ -69,7 +72,7 @@ struct screen_capture {
     NSString *application_id;
 };
 
-bool is_screen_capture_available(void);
+bool is_screen_capture_available_x(void);
 
 void screen_capture_build_content_list(struct screen_capture *sc, bool display_capture);
 
